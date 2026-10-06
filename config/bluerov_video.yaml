@@ -1,10 +1,7 @@
 bluerov_video_viewer:
   ros__parameters:
-    # Local interface on which to receive the stream. Use 0.0.0.0 for all interfaces.
-    ip_address: "0.0.0.0"
     port: 5600
-    # Leave empty to generate the standard BlueROV H.264/RTP pipeline from
-    # `ip_address` and `port`.
+    # Leave empty to generate the standard BlueROV H.264/RTP pipeline from `port`.
     pipeline: ""
     window_name: "BlueROV camera"
     frame_id: "bluerov_camera"

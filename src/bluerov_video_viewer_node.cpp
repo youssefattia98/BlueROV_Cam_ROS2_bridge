@@ -21,7 +21,6 @@ public:
   BlueROVVideoViewer()
   : Node("bluerov_video_viewer")
   {
-    const std::string ip_address = declare_parameter<std::string>("ip_address", "0.0.0.0");
     const int port = declare_parameter<int>("port", 5600);
     pipeline_ = declare_parameter<std::string>("pipeline", "");
     window_name_ = declare_parameter<std::string>("window_name", "BlueROV camera");
@@ -29,16 +28,13 @@ public:
     publish_ros_topic_ = declare_parameter<bool>("publish_ros_topic", true);
     show_window_ = declare_parameter<bool>("show_window", true);
 
-    if (ip_address.empty()) {
-      throw std::invalid_argument("Parameter 'ip_address' must not be empty");
-    }
     if (port < 1 || port > 65535) {
       throw std::invalid_argument("Parameter 'port' must be between 1 and 65535");
     }
 
     if (pipeline_.empty()) {
       pipeline_ =
-        "udpsrc address=" + ip_address + " port=" + std::to_string(port) +
+        "udpsrc port=" + std::to_string(port) +
         " caps=\"application/x-rtp,media=video,clock-rate=90000,encoding-name=H264,payload=96\" ! "
         "rtpjitterbuffer latency=100 drop-on-latency=true ! "
         "rtph264depay ! avdec_h264 ! videoconvert ! "

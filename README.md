@@ -7,8 +7,7 @@ recording, perception, or visualization nodes.
 
 ## Features
 
-- Receives the standard H.264/RTP BlueROV stream on a configurable local IP
-  address and UDP port.
+- Receives the standard H.264/RTP BlueROV stream on a configurable UDP port.
 - Displays decoded video in a resizable OpenCV window.
 - Optionally publishes `sensor_msgs/msg/Image` frames on `/image_raw` using
   sensor-data QoS.
@@ -61,7 +60,6 @@ Edit [`config/bluerov_video.yaml`](config/bluerov_video.yaml):
 ```yaml
 bluerov_video_viewer:
   ros__parameters:
-    ip_address: "0.0.0.0"
     port: 5600
     pipeline: ""
     window_name: "BlueROV camera"
@@ -72,7 +70,6 @@ bluerov_video_viewer:
 
 | Parameter | Default | Description |
 | --- | --- | --- |
-| `ip_address` | `0.0.0.0` | Local computer interface on which UDP packets are received. |
 | `port` | `5600` | Local UDP port carrying the H.264/RTP stream. |
 | `pipeline` | empty | Complete custom GStreamer pipeline. Empty uses the generated default pipeline. |
 | `window_name` | `BlueROV camera` | Title of the display window. |
@@ -80,10 +77,16 @@ bluerov_video_viewer:
 | `show_window` | `true` | Enables or disables the OpenCV display window. |
 | `publish_ros_topic` | `true` | Enables or disables publication of `/image_raw`. |
 
-`ip_address` is the address of the receiving network interface on the computer,
-not the remote BlueROV address. Keep it at `0.0.0.0` to listen on every local
-interface. Set it to a specific local address only when the computer has
-multiple interfaces and the stream must be received on one of them.
+The receiver listens on all local network interfaces. In BlueOS, configure the
+video stream destination to use the current PC's IP address and the same UDP
+`port` specified in `config/bluerov_video.yaml`. The stream will not arrive if
+BlueOS points to another computer, an old DHCP address, or a different port.
+
+To find the current PC network addresses, run:
+
+```bash
+ip -brief address
+```
 
 ## Run
 
@@ -96,13 +99,12 @@ source install/setup.bash
 ros2 launch bluerov_video_viewer bluerov_video_viewer.launch.py
 ```
 
-Parameters can also be overridden from the command line. For example, listen
-on local address `192.168.2.1`, use port `5601`, show the video, and disable ROS
-image publication:
+Parameters can also be overridden from the command line. For example, use port
+`5601`, show the video, and disable ROS image publication. BlueOS must also be
+configured to stream to port `5601` on this PC:
 
 ```bash
 ros2 run bluerov_video_viewer bluerov_video_viewer_node --ros-args \
-  -p ip_address:=192.168.2.1 \
   -p port:=5601 \
   -p publish_ros_topic:=false
 ```
@@ -142,7 +144,7 @@ pipeline by setting `pipeline` in the YAML file, or pass one directly:
 
 ```bash
 ros2 run bluerov_video_viewer bluerov_video_viewer_node --ros-args \
-  -p pipeline:='udpsrc address=0.0.0.0 port=5600 caps="application/x-rtp,media=video,encoding-name=H264,payload=96" ! rtph264depay ! nvv4l2decoder ! nvvidconv ! video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR ! appsink max-buffers=1 drop=true sync=false'
+  -p pipeline:='udpsrc port=5600 caps="application/x-rtp,media=video,encoding-name=H264,payload=96" ! rtph264depay ! nvv4l2decoder ! nvvidconv ! video/x-raw,format=BGRx ! videoconvert ! video/x-raw,format=BGR ! appsink max-buffers=1 drop=true sync=false'
 ```
 
 Any custom pipeline must end with an `appsink` that supplies BGR frames to
@@ -166,12 +168,11 @@ gst-inspect-1.0 avdec_h264
 
 If there is no video:
 
-1. Confirm that the BlueROV is sending H.264/RTP to the computer's IP and the
-   configured port.
+1. Confirm that BlueOS is sending H.264/RTP to the current PC's IP address and
+   the port configured in `config/bluerov_video.yaml`.
 2. Allow the UDP port through the computer firewall.
-3. Keep `ip_address` at `0.0.0.0` unless a specific local interface is needed.
-4. Check that OpenCV reports GStreamer support.
-5. Verify that another application is not already using the same UDP port.
+3. Check that OpenCV reports GStreamer support.
+4. Verify that another application is not already using the same UDP port.
 
 ## License
 
